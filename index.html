@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>CargaFlow</title>
+  <meta name="description" content="Sistema de Controle de Embarques" />
+  <meta name="theme-color" content="#0a0f1e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CargaFlow" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0a0f1e;
+      --bg2: #111827;
+      --bg3: #1a2236;
+      --glass: rgba(255,255,255,0.04);
+      --glass2: rgba(255,255,255,0.08);
+      --glass3: rgba(255,255,255,0.12);
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --accent: #3b7fff;
+      --accent2: #5b9bff;
+      --accent-glow: rgba(59,127,255,0.3);
+      --green: #22d3a5;
+      --green-glow: rgba(34,211,165,0.2);
+      --orange: #ff7b3b;
+      --red: #ff4b6e;
+      --yellow: #ffcc3b;
+      --text: #f0f4ff;
+      --text2: #8b9cc0;
+      --text3: #4a5878;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+      --shadow-sm: 0 4px 16px rgba(0,0,0,0.3);
+      --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+      --sidebar-w: 240px;
+      --font: 'DM Sans', sans-serif;
+      --font-display: 'Syne', sans-serif;
+    }
+    [data-theme="light"] {
+      --bg: #f0f4ff;
+      --bg2: #e4eaf7;
+      --bg3: #dae0f0;
+      --glass: rgba(255,255,255,0.7);
+      --glass2: rgba(255,255,255,0.85);
+      --glass3: rgba(255,255,255,0.95);
+      --border: rgba(0,0,0,0.08);
+      --border2: rgba(0,0,0,0.14);
+      --text: #0f1629;
+      --text2: #3a4a6b;
+      --text3: #7a8aab;
+      --shadow: 0 8px 32px rgba(0,0,0,0.12);
+      --shadow-sm: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+    /* ─── TYPOGRAPHY ─── */
+    h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 700; }
+
+    /* ─── LAYOUT ─── */
+    #app { display: flex; min-height: 100dvh; }
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100dvh;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      z-index: 100;
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .sidebar.hidden { transform: translateX(-100%); }
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-w);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      transition: margin 0.3s;
+    }
+    .main-content.full { margin-left: 0; }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-mark {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .logo-text { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-section { margin-bottom: 8px; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      color: var(--text3); text-transform: uppercase;
+      padding: 8px 12px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text2);
+      font-size: 14px; font-weight: 500;
+      transition: var(--transition);
+      text-decoration: none;
+      position: relative;
+    }
+    .nav-item:hover { background: var(--glass2); color: var(--text); }
+    .nav-item.active {
+      background: linear-gradient(135deg, var(--accent-glow), rgba(91,155,255,0.15));
+      color: var(--accent2);
+      border: 1px solid rgba(59,127,255,0.2);
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 60%; background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--accent);
+      color: white;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 99px;
+    }
+    .sidebar-footer {
+      padding: 14px 10px;
+      border-top: 1px solid var(--border);
+    }
+    .user-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: var(--glass);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .user-avatar {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 13px; font-weight: 600; truncate; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role { font-size: 11px; color: var(--text3); text-transform: capitalize; }
+    .logout-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-size: 16px;
+      padding: 4px; border-radius: 6px;
+      transition: var(--transition);
+    }
+    .logout-btn:hover { color: var(--red); background: rgba(255,75,110,0.1); }
+
+    /* ─── TOPBAR ─── */
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 24px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+    .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .menu-toggle {
+      display: none;
+      background: var(--glass2); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 18px; width: 38px; height: 38px;
+      align-items: center; justify-content: center; cursor: pointer;
+    }
+
+    /* ─── PAGE CONTENT ─── */
+    .page { padding: 24px; flex: 1; display: none; }
+    .page.active { display: block; }
+
+    /* ─── CARDS ─── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card-glass {
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    /* ─── STAT CARDS ─── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .stat-card::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-card.blue::after { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .stat-card.green::after { background: linear-gradient(90deg, var(--green), #22d3a5aa); }
+    .stat-card.orange::after { background: linear-gradient(90deg, var(--orange), #ffaa7b); }
+    .stat-card.red::after { background: linear-gradient(90deg, var(--red), #ff7b9b); }
+    .stat-label { font-size: 12px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .stat-value { font-family: var(--font-display); font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .stat-sub { font-size: 12px; color: var(--text3); }
+    .stat-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 32px; opacity: 0.15; }
+
+    /* ─── TABLES ─── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead tr { background: var(--bg3); border-bottom: 1px solid var(--border); }
+    thead th {
+      padding: 12px 16px; text-align: left;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      color: var(--text3); text-transform: uppercase; white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--glass); }
+    tbody td { padding: 12px 16px; color: var(--text2); vertical-align: middle; }
+    tbody td.bold { color: var(--text); font-weight: 600; }
+
+    /* ─── STATUS BADGES ─── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 99px;
+      font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .badge-aguardando { background: rgba(255,204,59,0.12); color: var(--yellow); border: 1px solid rgba(255,204,59,0.2); }
+    .badge-aguardando::before { background: var(--yellow); }
+    .badge-carregando { background: rgba(59,127,255,0.12); color: var(--accent2); border: 1px solid rgba(59,127,255,0.2); }
+    .badge-carregando::before { background: var(--accent); }
+    .badge-transito { background: rgba(255,123,59,0.12); color: var(--orange); border: 1px solid rgba(255,123,59,0.2); }
+    .badge-transito::before { background: var(--orange); }
+    .badge-entregue { background: rgba(34,211,165,0.12); color: var(--green); border: 1px solid rgba(34,211,165,0.2); }
+    .badge-entregue::before { background: var(--green); }
+    .badge-cancelado { background: rgba(255,75,110,0.12); color: var(--red); border: 1px solid rgba(255,75,110,0.2); }
+    .badge-cancelado::before { background: var(--red); }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 16px; border-radius: var(--radius-sm);
+      font-family: var(--font); font-size: 14px; font-weight: 600;
+      border: none; cursor: pointer; transition: var(--transition);
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+    .btn-primary:hover { background: var(--accent2); box-shadow: 0 6px 20px var(--accent-glow); }
+    .btn-secondary {
+      background: var(--glass2);
+      color: var(--text);
+      border: 1px solid var(--border2);
+    }
+    .btn-secondary:hover { background: var(--glass3); }
+    .btn-danger {
+      background: rgba(255,75,110,0.12);
+      color: var(--red);
+      border: 1px solid rgba(255,75,110,0.2);
+    }
+    .btn-danger:hover { background: rgba(255,75,110,0.2); }
+    .btn-sm { padding: 6px 11px; font-size: 13px; border-radius: 8px; }
+    .btn-icon { padding: 8px; width: 34px; height: 34px; justify-content: center; }
+
+    /* ─── FORMS ─── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block; margin-bottom: 6px;
+      font-size: 13px; font-weight: 600; color: var(--text2);
+    }
+    .form-input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font); font-size: 14px;
+      padding: 11px 14px;
+      outline: none;
+      transition: var(--transition);
+    }
+    .form-input:focus { border-color: var(--accent); background: var(--bg2); }
+    .form-input::placeholder { color: var(--text3); }
+    .form-select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font); font-size: 14px;
+      padding: 11px 14px;
+      outline: none;
+      transition: var(--transition);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%238b9cc0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+    .form-select:focus { border-color: var(--accent); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* ─── FILTERS ─── */
+    .filters-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px;
+      margin-bottom: 16px;
+    }
+    .filter-input {
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-xs);
+      color: var(--text);
+      font-family: var(--font); font-size: 13px;
+      padding: 7px 11px; outline: none;
+      transition: var(--transition); flex: 1; min-width: 120px;
+    }
+    .filter-input:focus { border-color: var(--accent); }
+    .filter-input::placeholder { color: var(--text3); }
+
+    /* ─── MODAL ─── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%; max-width: 560px;
+      max-height: 90dvh; overflow-y: auto;
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close {
+      background: var(--glass2); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text2); cursor: pointer; font-size: 18px;
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      transition: var(--transition);
+    }
+    .modal-close:hover { color: var(--red); border-color: var(--red); }
+
+    /* ─── LOGIN ─── */
+    #login-page {
+      display: none; min-height: 100dvh;
+      align-items: center; justify-content: center;
+      background: var(--bg);
+      position: relative; overflow: hidden;
+    }
+    #login-page.active { display: flex; }
+    .login-bg {
+      position: absolute; inset: 0; pointer-events: none;
+    }
+    .login-bg .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); opacity: 0.2;
+    }
+    .login-bg .orb1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -200px; }
+    .login-bg .orb2 { width: 400px; height: 400px; background: var(--green); bottom: -150px; left: -150px; }
+    .login-card {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border2);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%; max-width: 420px;
+      position: relative; z-index: 1;
+    }
+    .login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+    .login-logo-icon {
+      width: 48px; height: 48px; background: var(--accent);
+      border-radius: 14px; display: flex; align-items: center; justify-content: center;
+      font-size: 24px; box-shadow: 0 0 24px var(--accent-glow);
+    }
+    .login-logo-text { font-family: var(--font-display); font-size: 28px; font-weight: 800; }
+    .login-logo-text span { color: var(--accent); }
+    .login-subtitle { color: var(--text3); font-size: 14px; margin-bottom: 28px; }
+    .login-error {
+      background: rgba(255,75,110,0.1);
+      border: 1px solid rgba(255,75,110,0.3);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px; color: var(--red);
+      margin-bottom: 16px;
+      display: none;
+    }
+    .login-error.show { display: block; }
+    .btn-login {
+      width: 100%; padding: 14px;
+      background: var(--accent); color: white;
+      border: none; border-radius: var(--radius-sm);
+      font-family: var(--font); font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: var(--transition);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    .btn-login:hover { background: var(--accent2); transform: translateY(-1px); }
+    .btn-login:active { transform: scale(0.99); }
+    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ─── RAPID MODE ─── */
+    #rapido-page {
+      display: none; min-height: 100dvh;
+      flex-direction: column;
+      padding: 0 0 env(safe-area-inset-bottom);
+    }
+    #rapido-page.active { display: flex; }
+    .rapido-topbar {
+      padding: 16px 20px;
+      padding-top: calc(16px + env(safe-area-inset-top));
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .rapido-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; }
+    .rapido-body { flex: 1; padding: 20px; overflow-y: auto; }
+    .rapido-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .rapido-section-title {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+      color: var(--text3); text-transform: uppercase; margin-bottom: 12px;
+    }
+    .rapido-input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: var(--font); font-size: 16px;
+      padding: 14px 16px;
+      outline: none;
+      transition: var(--transition);
+      margin-bottom: 12px;
+      -webkit-appearance: none;
+    }
+    .rapido-input:focus { border-color: var(--accent); background: var(--bg2); }
+    .rapido-input::placeholder { color: var(--text3); }
+    .rapido-input:last-child { margin-bottom: 0; }
+    .rapido-save-btn {
+      width: 100%;
+      padding: 18px;
+      background: var(--accent);
+      color: white; border: none;
+      border-radius: 16px;
+      font-family: var(--font-display); font-size: 18px; font-weight: 800;
+      letter-spacing: 0.03em; cursor: pointer;
+      box-shadow: 0 8px 24px var(--accent-glow);
+      transition: var(--transition);
+      margin-bottom: 12px;
+    }
+    .rapido-save-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+    .rapido-save-btn:active { transform: scale(0.98); }
+    .rapido-save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .rapido-dup-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--glass2);
+      color: var(--text); border: 1px solid var(--border2);
+      border-radius: 14px;
+      font-family: var(--font); font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: var(--transition);
+    }
+    .rapido-dup-btn:hover { background: var(--glass3); }
+    .recentes-list { display: flex; flex-direction: column; gap: 8px; }
+    .recente-item {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .recente-rota { font-size: 14px; font-weight: 600; color: var(--text); }
+    .recente-placa { font-size: 12px; color: var(--accent2); font-weight: 600; font-family: var(--font-display); }
+    .recente-valor { font-size: 13px; font-weight: 700; color: var(--green); }
+    .success-toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: var(--green); color: white;
+      padding: 14px 24px; border-radius: 99px;
+      font-weight: 700; font-size: 15px;
+      box-shadow: 0 8px 24px rgba(34,211,165,0.4);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 9999; white-space: nowrap;
+    }
+    .success-toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ─── DASHBOARD ─── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .chart-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .chart-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text2); }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* ─── SECTION HEADER ─── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+    }
+    .section-title { font-size: 20px; font-weight: 800; }
+
+    /* ─── ACTION ROW ─── */
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      color: var(--text3);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    /* ─── USER MANAGEMENT ─── */
+    .user-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .user-row:last-child { border-bottom: none; }
+    .role-badge { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+    .role-admin { background: rgba(59,127,255,0.15); color: var(--accent2); }
+    .role-operador { background: rgba(34,211,165,0.15); color: var(--green); }
+    .role-visualizador { background: rgba(139,156,192,0.15); color: var(--text2); }
+
+    /* ─── DROPDOWN ─── */
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-menu {
+      position: absolute; right: 0; top: calc(100% + 4px); z-index: 200;
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: var(--radius-sm); min-width: 160px;
+      box-shadow: var(--shadow); padding: 4px;
+      opacity: 0; pointer-events: none;
+      transform: translateY(-8px);
+      transition: all 0.15s;
+    }
+    .dropdown-menu.open { opacity: 1; pointer-events: all; transform: translateY(0); }
+    .dropdown-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      color: var(--text2); transition: var(--transition);
+      background: none; border: none; width: 100%; text-align: left;
+    }
+    .dropdown-item:hover { background: var(--glass2); color: var(--text); }
+    .dropdown-item.danger:hover { color: var(--red); background: rgba(255,75,110,0.08); }
+
+    /* ─── THEME TOGGLE ─── */
+    .theme-toggle {
+      background: var(--glass2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text2); font-size: 16px;
+      width: 34px; height: 34px; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; transition: var(--transition);
+    }
+    .theme-toggle:hover { color: var(--text); border-color: var(--border2); }
+
+    /* ─── AUTOCOMPLETE ─── */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      position: absolute; left: 0; right: 0; top: calc(100% + 2px);
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: var(--radius-sm); z-index: 300; max-height: 180px;
+      overflow-y: auto; display: none;
+    }
+    .autocomplete-list.open { display: block; }
+    .autocomplete-item {
+      padding: 10px 14px; font-size: 14px; cursor: pointer;
+      color: var(--text2); transition: var(--transition); border-bottom: 1px solid var(--border);
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: var(--glass2); color: var(--text); }
+
+    /* ─── LOADING ─── */
+    .loading-spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── MOBILE SIDEBAR OVERLAY ─── */
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 99;
+    }
+    .sidebar-overlay.open { display: block; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        z-index: 200;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0 !important; }
+      .menu-toggle { display: flex; }
+      .form-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .page { padding: 16px; }
+      .topbar { padding: 12px 16px; }
+      .section-header { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .login-card { padding: 28px 20px; }
+      .topbar-actions .btn span { display: none; }
+    }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .page.active { animation: fadeIn 0.25s ease; }
+
+    /* ─── CONFIG COLORS ─── */
+    .color-swatch {
+      width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: var(--transition);
+    }
+    .color-swatch.active, .color-swatch:hover { border-color: var(--text); transform: scale(1.15); }
+    .color-swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* ─── SCROLLABLE TABLE ─── */
+    .table-actions { display: flex; gap: 6px; }
+  </style>
+</head>
+<body>
+  <!-- ─── LOGIN PAGE ─── -->
+  <div id="login-page">
+    <div class="login-bg">
+      <div class="orb orb1"></div>
+      <div class="orb orb2"></div>
+    </div>
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-icon">🚛</div>
+        <div class="login-logo-text">Carga<span>Flow</span></div>
+      </div>
+      <p class="login-subtitle">Sistema de Controle de Embarques</p>
+      <div class="login-error" id="login-error"></div>
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input type="email" class="form-input" id="login-email" placeholder="seu@email.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input type="password" class="form-input" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn-login" id="login-btn" onclick="doLogin()">Entrar</button>
+    </div>
+  </div>
+
+  <!-- ─── RAPID MODE ─── -->
+  <div id="rapido-page">
+    <div class="rapido-topbar">
+      <div>
+        <div class="rapido-title">⚡ Lançamento Rápido</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px" id="rapido-user-label"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">🌙</div>
+        <button class="btn btn-secondary btn-sm" onclick="goTo('dashboard')">🖥 Painel</button>
+        <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sair</button>
+      </div>
+    </div>
+    <div class="rapido-body">
+      <div class="rapido-card">
+        <div class="rapido-section-title">🚛 Dados do Embarque</div>
+        <div class="autocomplete-wrap">
+          <input type="text" class="rapido-input" id="r-placa" placeholder="Placa do veículo (ex: ABC1234)" autocomplete="off" oninput="autocompleteRapido('r-placa','placa')" />
+          <div class="autocomplete-list" id="ac-r-placa"></div>
+        </div>
+        <div class="autocomplete-wrap">
+          <input type="text" class="rapido-input" id="r-motorista" placeholder="Nome do motorista" autocomplete="off" oninput="autocompleteRapido('r-motorista','motorista')" />
+          <div class="autocomplete-list" id="ac-r-motorista"></div>
+        </div>
+        <div class="autocomplete-wrap">
+          <input type="text" class="rapido-input" id="r-origem" placeholder="Cidade de origem" autocomplete="off" oninput="autocompleteRapido('r-origem','origem')" />
+          <div class="autocomplete-list" id="ac-r-origem"></div>
+        </div>
+        <div class="autocomplete-wrap">
+          <input type="text" class="rapido-input" id="r-destino" placeholder="Cidade de destino" autocomplete="off" oninput="autocompleteRapido('r-destino','destino')" />
+          <div class="autocomplete-list" id="ac-r-destino"></div>
+        </div>
+        <input type="text" class="rapido-input" id="r-valor" placeholder="Valor do frete (R$)" inputmode="decimal" />
+        <input type="text" class="rapido-input" id="r-obs" placeholder="Observação (opcional)" />
+      </div>
+      <button class="rapido-save-btn" id="rapido-save-btn" onclick="salvarRapido()">SALVAR EMBARQUE</button>
+      <button class="rapido-dup-btn" onclick="duplicarUltimo()">📋 Duplicar Último Embarque</button>
+
+      <div style="margin-top:24px">
+        <div class="rapido-section-title">📦 Embarques Recentes</div>
+        <div class="recentes-list" id="recentes-list">
+          <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Nenhum embarque ainda</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SUCCESS TOAST ─── -->
+  <div class="success-toast" id="success-toast">✅ Embarque salvo com sucesso!</div>
+
+  <!-- ─── MAIN APP ─── -->
+  <div id="app" style="display:none">
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">
+          <div class="logo-icon">🚛</div>
+          <div class="logo-text">Carga<span>Flow</span></div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-label">Principal</div>
+          <div class="nav-item" onclick="goTo('dashboard')" data-route="dashboard">
+            <span class="nav-icon">📊</span> Dashboard
+          </div>
+          <div class="nav-item" onclick="goTo('embarques')" data-route="embarques">
+            <span class="nav-icon">📦</span> Embarques
+          </div>
+          <div class="nav-item" onclick="goTo('rapido')" data-route="rapido">
+            <span class="nav-icon">⚡</span> Lançamento Rápido
+          </div>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-label">Análise</div>
+          <div class="nav-item" onclick="goTo('relatorios')" data-route="relatorios">
+            <span class="nav-icon">📁</span> Relatórios
+          </div>
+        </div>
+        <div class="nav-section" id="admin-nav" style="display:none">
+          <div class="nav-section-label">Administração</div>
+          <div class="nav-item" onclick="goTo('configuracoes')" data-route="configuracoes">
+            <span class="nav-icon">⚙️</span> Configurações
+          </div>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="user-avatar" id="sidebar-avatar">?</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebar-name">Carregando...</div>
+            <div class="user-role" id="sidebar-role"></div>
+          </div>
+          <button class="logout-btn" onclick="doLogout()" title="Sair">⏻</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-content" id="main-content">
+      <header class="topbar">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-actions">
+          <div class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">🌙</div>
+          <button class="btn btn-primary btn-sm" onclick="openNovoEmbarque()">
+            <span>+</span> <span>Novo Embarque</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="dashboard-stats"></div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Embarques por Status</div>
+            <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Embarques (últimos 7 dias)</div>
+            <div class="chart-wrap"><canvas id="chart-dias"></canvas></div>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="section-header">
+            <div class="section-title">Embarques Recentes</div>
+            <button class="btn btn-secondary btn-sm" onclick="goTo('embarques')">Ver todos →</button>
+          </div>
+          <div class="table-wrap">
+            <table id="dash-table">
+              <thead><tr>
+                <th>Placa</th><th>Motorista</th><th>Rota</th><th>Valor</th><th>Status</th><th>Data</th>
+              </tr></thead>
+              <tbody id="dash-tbody"><tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📦</div><p>Nenhum embarque</p></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMBARQUES -->
+      <div class="page" id="page-embarques">
+        <div class="section-header">
+          <div class="section-title">📦 Embarques</div>
+          <div class="action-row">
+            <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ CSV</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportJSON()">⬇ JSON</button>
+            <button class="btn btn-primary btn-sm" onclick="openNovoEmbarque()">+ Novo</button>
+          </div>
+        </div>
+        <div class="filters-bar">
+          <input type="date" class="filter-input" id="f-data-ini" placeholder="Data inicial" style="max-width:150px" />
+          <input type="date" class="filter-input" id="f-data-fim" placeholder="Data final" style="max-width:150px" />
+          <input type="text" class="filter-input" id="f-placa" placeholder="Placa..." />
+          <input type="text" class="filter-input" id="f-motorista" placeholder="Motorista..." />
+          <input type="text" class="filter-input" id="f-rota" placeholder="Origem/Destino..." />
+          <select class="filter-input" id="f-status" style="max-width:180px">
+            <option value="">Todos os status</option>
+            <option value="Aguardando carregamento">Aguardando carregamento</option>
+            <option value="Em carregamento">Em carregamento</option>
+            <option value="Em trânsito">Em trânsito</option>
+            <option value="Entregue">Entregue</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="applyFilters()">Filtrar</button>
+          <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Limpar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Placa</th><th>Motorista</th><th>Origem</th><th>Destino</th>
+              <th>Valor</th><th>Status</th><th>Criado por</th><th>Data</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="embarques-tbody"><tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📦</div><p>Carregando...</p></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="embarques-pagination" style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div class="page" id="page-relatorios">
+        <div class="section-header"><div class="section-title">📁 Relatórios</div></div>
+        <div class="stats-grid" id="rel-stats"></div>
+        <div class="card" style="margin-top:16px">
+          <div style="font-weight:700;margin-bottom:16px;font-size:15px">Embarques por Usuário</div>
+          <div class="chart-wrap"><canvas id="chart-usuarios"></canvas></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div style="font-weight:700;margin-bottom:16px;font-size:15px">Valor por Destino (Top 10)</div>
+          <div class="chart-wrap" style="height:280px"><canvas id="chart-destinos"></canvas></div>
+        </div>
+      </div>
+
+      <!-- CONFIGURAÇÕES -->
+      <div class="page" id="page-configuracoes">
+        <div class="section-header"><div class="section-title">⚙️ Configurações</div></div>
+        <div style="display:grid;gap:16px;max-width:700px">
+          <div class="card">
+            <div style="font-weight:700;margin-bottom:16px">Aparência</div>
+            <div class="form-group">
+              <label class="form-label">Tema</label>
+              <div style="display:flex;gap:10px">
+                <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Escuro</button>
+                <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Claro</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cor de Destaque</label>
+              <div class="color-swatches">
+                <div class="color-swatch" style="background:#3b7fff" onclick="setAccentColor('#3b7fff','rgba(59,127,255,0.3)')" title="Azul"></div>
+                <div class="color-swatch" style="background:#7b3fff" onclick="setAccentColor('#7b3fff','rgba(123,63,255,0.3)')" title="Roxo"></div>
+                <div class="color-swatch" style="background:#ff7b3b" onclick="setAccentColor('#ff7b3b','rgba(255,123,59,0.3)')" title="Laranja"></div>
+                <div class="color-swatch" style="background:#22d3a5" onclick="setAccentColor('#22d3a5','rgba(34,211,165,0.3)')" title="Verde"></div>
+                <div class="color-swatch" style="background:#ff4b6e" onclick="setAccentColor('#ff4b6e','rgba(255,75,110,0.3)')" title="Vermelho"></div>
+                <div class="color-swatch" style="background:#ffcc3b" onclick="setAccentColor('#ffcc3b','rgba(255,204,59,0.3)')" title="Amarelo"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" id="users-config-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <div style="font-weight:700">Usuários</div>
+              <button class="btn btn-primary btn-sm" onclick="openNovoUsuario()">+ Novo Usuário</button>
+            </div>
+            <div id="users-list">
+              <div style="color:var(--text3);font-size:13px">Carregando...</div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-weight:700;margin-bottom:16px">Backup</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-secondary" onclick="exportJSON()">⬇ Baixar backup JSON</button>
+              <button class="btn btn-secondary" onclick="exportCSV()">⬇ Baixar CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL EMBARQUE ─── -->
+  <div class="modal-overlay" id="modal-embarque">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-embarque-title">Novo Embarque</div>
+        <button class="modal-close" onclick="closeModal('modal-embarque')">✕</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Placa *</label>
+          <input type="text" class="form-input" id="m-placa" placeholder="ABC1234" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Motorista *</label>
+          <input type="text" class="form-input" id="m-motorista" placeholder="Nome completo" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Origem *</label>
+          <input type="text" class="form-input" id="m-origem" placeholder="Cidade de origem" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Destino *</label>
+          <input type="text" class="form-input" id="m-destino" placeholder="Cidade de destino" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Valor (R$) *</label>
+          <input type="number" class="form-input" id="m-valor" placeholder="0,00" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="m-status">
+            <option value="Aguardando carregamento">Aguardando carregamento</option>
+            <option value="Em carregamento">Em carregamento</option>
+            <option value="Em trânsito">Em trânsito</option>
+            <option value="Entregue">Entregue</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observação</label>
+        <textarea class="form-input" id="m-obs" rows="2" placeholder="Informações adicionais..." style="resize:vertical"></textarea>
+      </div>
+      <input type="hidden" id="m-id" />
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button class="btn btn-secondary" onclick="closeModal('modal-embarque')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-salvar-embarque" onclick="salvarEmbarque()">Salvar Embarque</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL NOVO USUÁRIO ─── -->
+  <div class="modal-overlay" id="modal-usuario">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <div class="modal-title">Novo Usuário</div>
+        <button class="modal-close" onclick="closeModal('modal-usuario')">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nome Completo *</label>
+        <input type="text" class="form-input" id="nu-nome" placeholder="Nome completo" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail *</label>
+        <input type="email" class="form-input" id="nu-email" placeholder="email@empresa.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha *</label>
+        <input type="password" class="form-input" id="nu-senha" placeholder="Mínimo 6 caracteres" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Perfil</label>
+        <select class="form-select" id="nu-tipo">
+          <option value="operador">Operador</option>
+          <option value="visualizador">Visualizador</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div id="nu-error" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button>
+        <button class="btn btn-primary" onclick="criarUsuario()">Criar Usuário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL HISTÓRICO ─── -->
+  <div class="modal-overlay" id="modal-historico">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <div class="modal-title">Histórico de Alterações</div>
+        <button class="modal-close" onclick="closeModal('modal-historico')">✕</button>
+      </div>
+      <div id="historico-content">Carregando...</div>
+    </div>
+  </div>
+
+  <script>
+  // ─── SUPABASE CONFIG ───────────────────────────────────────────
+  // ⚠️ SUBSTITUA OS VALORES ABAIXO PELAS SUAS CREDENCIAIS DO SUPABASE
+  const SUPABASE_URL = 'https://owciexcrdbvygikvdrxv.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_LqxdsuqDmLW1uCcWA4J8jQ_mKWjaSBp';
+  // ──────────────────────────────────────────────────────────────
+
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ─── STATE ────────────────────────────────────────────────────
+  let currentUser = null;
+  let currentProfile = null;
+  let allEmbarques = [];
+  let filteredEmbarques = [];
+  let currentPage = 1;
+  const PER_PAGE = 20;
+  let chartStatus = null, chartDias = null, chartUsuarios = null, chartDestinos = null;
+
+  // ─── INIT ─────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    loadTheme();
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      await loadProfile();
+      initApp();
+    } else {
+      showLogin();
+    }
+    db.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        currentUser = session.user;
+        await loadProfile();
+        initApp();
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        currentProfile = null;
+        showLogin();
+      }
+    });
+  });
+
+  async function loadProfile() {
+    const { data } = await db.from('usuarios').select('*').eq('id', currentUser.id).single();
+    if (data) {
+      currentProfile = data;
+    } else {
+      // auto-create profile
+      const nome = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+      const { data: newP } = await db.from('usuarios').upsert({
+        id: currentUser.id,
+        email: currentUser.email,
+        nome,
+        tipo: 'operador'
+      }, { onConflict: 'id' }).select().single();
+      currentProfile = newP || { id: currentUser.id, email: currentUser.email, nome, tipo: 'operador' };
+    }
+  }
+
+  function initApp() {
+    const hash = window.location.hash.replace('#','') || 'dashboard';
+    updateSidebarUser();
+    if (hash === 'rapido') {
+      showRapidoPage();
+    } else {
+      document.getElementById('app').style.display = 'flex';
+      if (currentProfile?.tipo === 'admin') {
+        document.getElementById('admin-nav').style.display = 'block';
+      }
+      goTo(hash);
+      setupRealtimeSubscription();
+    }
+  }
+
+  // ─── AUTH ─────────────────────────────────────────────────────
+  function showLogin() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('rapido-page').classList.remove('active');
+    document.getElementById('login-page').classList.add('active');
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const pwd = document.getElementById('login-password').value;
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('login-error');
+    if (!email || !pwd) { showLoginError('Preencha todos os campos.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Entrando...';
+    const { error } = await db.auth.signInWithPassword({ email, password: pwd });
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    if (error) showLoginError('E-mail ou senha incorretos.');
+    else { err.classList.remove('show'); document.getElementById('login-page').classList.remove('active'); }
+  }
+
+  function showLoginError(msg) {
+    const el = document.getElementById('login-error');
+    el.textContent = msg; el.classList.add('show');
+  }
+
+  document.getElementById('login-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  async function doLogout() {
+    await db.auth.signOut();
+  }
+
+  // ─── NAVIGATION ───────────────────────────────────────────────
+  function goTo(route) {
+    if (route === 'rapido') {
+      document.getElementById('app').style.display = 'none';
+      showRapidoPage();
+      window.location.hash = 'rapido';
+      return;
+    }
+    document.getElementById('rapido-page').classList.remove('active');
+    document.getElementById('app').style.display = 'flex';
+
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const page = document.getElementById('page-' + route);
+    if (page) page.classList.add('active');
+
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navItem = document.querySelector(`[data-route="${route}"]`);
+    if (navItem) navItem.classList.add('active');
+
+    const titles = { dashboard: '📊 Dashboard', embarques: '📦 Embarques', relatorios: '📁 Relatórios', configuracoes: '⚙️ Configurações' };
+    document.getElementById('topbar-title').textContent = titles[route] || route;
+    window.location.hash = route;
+    closeSidebar();
+
+    if (route === 'dashboard') loadDashboard();
+    else if (route === 'embarques') loadEmbarques();
+    else if (route === 'relatorios') loadRelatorios();
+    else if (route === 'configuracoes') loadConfiguracoes();
+  }
+
+  function showRapidoPage() {
+    document.getElementById('rapido-page').classList.add('active');
+    if (currentProfile) {
+      document.getElementById('rapido-user-label').textContent = `Lançando como: ${currentProfile.nome}`;
+    }
+    loadRecentes();
+  }
+
+  // ─── SIDEBAR ──────────────────────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+
+  function updateSidebarUser() {
+    if (!currentProfile) return;
+    const nameEl = document.getElementById('sidebar-name');
+    const roleEl = document.getElementById('sidebar-role');
+    const avatarEl = document.getElementById('sidebar-avatar');
+    if (nameEl) nameEl.textContent = currentProfile.nome || currentProfile.email;
+    if (roleEl) roleEl.textContent = currentProfile.tipo;
+    if (avatarEl) avatarEl.textContent = (currentProfile.nome || currentProfile.email)[0].toUpperCase();
+    document.getElementById('rapido-user-label').textContent = `Lançando como: ${currentProfile.nome}`;
+  }
+
+  // ─── MODALS ───────────────────────────────────────────────────
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); });
+
+  // ─── EMBARQUES CRUD ───────────────────────────────────────────
+  async function loadEmbarques() {
+    const tbody = document.getElementById('embarques-tbody');
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">⏳</div><p>Carregando...</p></div></td></tr>`;
+    const { data, error } = await db.from('embarques').select('*').order('criado_em', { ascending: false });
+    if (error) { tbody.innerHTML = `<tr><td colspan="9" style="color:var(--red);padding:20px">Erro: ${error.message}</td></tr>`; return; }
+    allEmbarques = data || [];
+    filteredEmbarques = [...allEmbarques];
+    currentPage = 1;
+    renderEmbarquesTable();
+  }
+
+  function renderEmbarquesTable() {
+    const tbody = document.getElementById('embarques-tbody');
+    const isAdmin = currentProfile?.tipo === 'admin';
+    const isOp = currentProfile?.tipo === 'operador' || isAdmin;
+
+    if (!filteredEmbarques.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📦</div><p>Nenhum embarque encontrado</p></div></td></tr>`;
+      document.getElementById('embarques-pagination').innerHTML = '';
+      return;
+    }
+
+    const start = (currentPage - 1) * PER_PAGE;
+    const page = filteredEmbarques.slice(start, start + PER_PAGE);
+
+    tbody.innerHTML = page.map(e => `
+      <tr>
+        <td class="bold" style="font-family:var(--font-display);letter-spacing:0.05em">${e.placa}</td>
+        <td>${e.motorista}</td>
+        <td>${e.origem}</td>
+        <td>${e.destino}</td>
+        <td class="bold" style="color:var(--green)">${formatCurrency(e.valor)}</td>
+        <td>${statusBadge(e.status)}</td>
+        <td style="color:var(--text3);font-size:12px">${e.criado_por || '-'}</td>
+        <td style="color:var(--text3);font-size:12px">${formatDate(e.criado_em)}</td>
+        <td>
+          <div class="table-actions">
+            ${isOp ? `<button class="btn btn-secondary btn-sm btn-icon" onclick="editarEmbarque('${e.id}')" title="Editar">✏️</button>` : ''}
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="verHistorico('${e.id}')" title="Histórico">📋</button>
+            ${isAdmin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deletarEmbarque('${e.id}')" title="Excluir">🗑</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const total = filteredEmbarques.length;
+    const pages = Math.ceil(total / PER_PAGE);
+    const el = document.getElementById('embarques-pagination');
+    if (pages <= 1) { el.innerHTML = ''; return; }
+    let html = '';
+    for (let i = 1; i <= pages; i++) {
+      html += `<button class="btn ${i === currentPage ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="goPage(${i})">${i}</button>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function goPage(p) { currentPage = p; renderEmbarquesTable(); }
+
+  function applyFilters() {
+    const dataIni = document.getElementById('f-data-ini').value;
+    const dataFim = document.getElementById('f-data-fim').value;
+    const placa = document.getElementById('f-placa').value.toLowerCase();
+    const mot = document.getElementById('f-motorista').value.toLowerCase();
+    const rota = document.getElementById('f-rota').value.toLowerCase();
+    const status = document.getElementById('f-status').value;
+
+    filteredEmbarques = allEmbarques.filter(e => {
+      const dt = new Date(e.criado_em);
+      if (dataIni && dt < new Date(dataIni)) return false;
+      if (dataFim && dt > new Date(dataFim + 'T23:59:59')) return false;
+      if (placa && !e.placa.toLowerCase().includes(placa)) return false;
+      if (mot && !e.motorista.toLowerCase().includes(mot)) return false;
+      if (rota && !e.origem.toLowerCase().includes(rota) && !e.destino.toLowerCase().includes(rota)) return false;
+      if (status && e.status !== status) return false;
+      return true;
+    });
+    currentPage = 1;
+    renderEmbarquesTable();
+  }
+
+  function clearFilters() {
+    ['f-data-ini','f-data-fim','f-placa','f-motorista','f-rota'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-status').value = '';
+    filteredEmbarques = [...allEmbarques];
+    currentPage = 1;
+    renderEmbarquesTable();
+  }
+
+  function openNovoEmbarque() {
+    document.getElementById('modal-embarque-title').textContent = 'Novo Embarque';
+    document.getElementById('m-id').value = '';
+    ['m-placa','m-motorista','m-origem','m-destino','m-obs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('m-valor').value = '';
+    document.getElementById('m-status').value = 'Aguardando carregamento';
+    openModal('modal-embarque');
+  }
+
+  function editarEmbarque(id) {
+    const e = allEmbarques.find(x => x.id === id);
+    if (!e) return;
+    document.getElementById('modal-embarque-title').textContent = 'Editar Embarque';
+    document.getElementById('m-id').value = e.id;
+    document.getElementById('m-placa').value = e.placa || '';
+    document.getElementById('m-motorista').value = e.motorista || '';
+    document.getElementById('m-origem').value = e.origem || '';
+    document.getElementById('m-destino').value = e.destino || '';
+    document.getElementById('m-valor').value = e.valor || '';
+    document.getElementById('m-status').value = e.status || '';
+    document.getElementById('m-obs').value = e.observacao || '';
+    openModal('modal-embarque');
+  }
+
+  async function salvarEmbarque() {
+    const id = document.getElementById('m-id').value;
+    const placa = document.getElementById('m-placa').value.trim().toUpperCase();
+    const motorista = document.getElementById('m-motorista').value.trim();
+    const origem = document.getElementById('m-origem').value.trim();
+    const destino = document.getElementById('m-destino').value.trim();
+    const valor = parseFloat(document.getElementById('m-valor').value) || 0;
+    const status = document.getElementById('m-status').value;
+    const obs = document.getElementById('m-obs').value.trim();
+
+    if (!placa || !motorista || !origem || !destino || !valor) {
+      alert('Preencha todos os campos obrigatórios (*)'); return;
+    }
+
+    const btn = document.getElementById('btn-salvar-embarque');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span>';
+
+    const payload = { placa, motorista, origem, destino, valor, status, observacao: obs, editado_por: currentProfile?.nome, atualizado_em: new Date().toISOString() };
+
+    let error;
+    if (id) {
+      const res = await db.from('embarques').update(payload).eq('id', id);
+      error = res.error;
+      if (!error) await logHistorico(id, `Embarque editado por ${currentProfile?.nome}`);
+    } else {
+      payload.criado_por = currentProfile?.nome || currentUser?.email;
+      payload.criado_em = new Date().toISOString();
+      const res = await db.from('embarques').insert(payload);
+      error = res.error;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Salvar Embarque';
+
+    if (error) { alert('Erro ao salvar: ' + error.message); return; }
+    closeModal('modal-embarque');
+    await loadEmbarques();
+  }
+
+  async function deletarEmbarque(id) {
+    if (!confirm('Tem certeza que deseja excluir este embarque?')) return;
+    await db.from('historico').delete().eq('embarque_id', id);
+    const { error } = await db.from('embarques').delete().eq('id', id);
+    if (error) { alert('Erro: ' + error.message); return; }
+    allEmbarques = allEmbarques.filter(e => e.id !== id);
+    filteredEmbarques = filteredEmbarques.filter(e => e.id !== id);
+    renderEmbarquesTable();
+  }
+
+  async function verHistorico(id) {
+    openModal('modal-historico');
+    const { data } = await db.from('historico').select('*').eq('embarque_id', id).order('criado_em', { ascending: false });
+    const el = document.getElementById('historico-content');
+    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">Nenhum histórico</div>'; return; }
+    el.innerHTML = data.map(h => `
+      <div style="border-bottom:1px solid var(--border);padding:12px 0">
+        <div style="font-size:13px;font-weight:600">${h.descricao}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${formatDate(h.criado_em)} por ${h.usuario || '-'}</div>
+      </div>
+    `).join('');
+  }
+
+  async function logHistorico(embarqueId, descricao) {
+    await db.from('historico').insert({ embarque_id: embarqueId, descricao, usuario: currentProfile?.nome, criado_em: new Date().toISOString() });
+  }
+
+  // ─── REALTIME ─────────────────────────────────────────────────
+  function setupRealtimeSubscription() {
+    db.channel('embarques-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'embarques' }, () => {
+      const hash = window.location.hash.replace('#','');
+      if (hash === 'embarques') loadEmbarques();
+      else if (hash === 'dashboard') loadDashboard();
+    }).subscribe();
+  }
+
+  // ─── DASHBOARD ────────────────────────────────────────────────
+  async function loadDashboard() {
+    const { data } = await db.from('embarques').select('*').order('criado_em', { ascending: false });
+    const embarques = data || [];
+
+    const total = embarques.length;
+    const totalValor = embarques.reduce((a, e) => a + (parseFloat(e.valor) || 0), 0);
+    const hoje = embarques.filter(e => new Date(e.criado_em).toDateString() === new Date().toDateString()).length;
+    const entregues = embarques.filter(e => e.status === 'Entregue').length;
+
+    document.getElementById('dashboard-stats').innerHTML = `
+      <div class="stat-card blue"><div class="stat-label">Total de Embarques</div><div class="stat-value">${total}</div><div class="stat-sub">todos os registros</div><div class="stat-icon">📦</div></div>
+      <div class="stat-card green"><div class="stat-label">Valor Total</div><div class="stat-value" style="font-size:22px">${formatCurrency(totalValor)}</div><div class="stat-sub">soma de todos os fretes</div><div class="stat-icon">💰</div></div>
+      <div class="stat-card orange"><div class="stat-label">Hoje</div><div class="stat-value">${hoje}</div><div class="stat-sub">embarques criados hoje</div><div class="stat-icon">📅</div></div>
+      <div class="stat-card red"><div class="stat-label">Entregues</div><div class="stat-value">${entregues}</div><div class="stat-sub">${total ? Math.round(entregues/total*100) : 0}% do total</div><div class="stat-icon">✅</div></div>
+    `;
+
+    // Recent table
+    const dash = embarques.slice(0, 8);
+    const dashTbody = document.getElementById('dash-tbody');
+    dashTbody.innerHTML = dash.length ? dash.map(e => `
+      <tr>
+        <td class="bold">${e.placa}</td>
+        <td>${e.motorista}</td>
+        <td style="font-size:12px">${e.origem} → ${e.destino}</td>
+        <td style="color:var(--green);font-weight:600">${formatCurrency(e.valor)}</td>
+        <td>${statusBadge(e.status)}</td>
+        <td style="font-size:12px;color:var(--text3)">${formatDate(e.criado_em)}</td>
+      </tr>
+    `).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📦</div><p>Nenhum embarque</p></div></td></tr>`;
+
+    // Charts
+    const statusCounts = {};
+    const STATUS_LIST = ['Aguardando carregamento','Em carregamento','Em trânsito','Entregue','Cancelado'];
+    STATUS_LIST.forEach(s => statusCounts[s] = 0);
+    embarques.forEach(e => { if (statusCounts[e.status] !== undefined) statusCounts[e.status]++; });
+
+    if (chartStatus) chartStatus.destroy();
+    const ctxS = document.getElementById('chart-status').getContext('2d');
+    chartStatus = new Chart(ctxS, {
+      type: 'doughnut',
+      data: {
+        labels: STATUS_LIST.map(s => s.replace('Aguardando carregamento','Aguardando')),
+        datasets: [{ data: STATUS_LIST.map(s => statusCounts[s]), backgroundColor: ['#ffcc3b','#3b7fff','#ff7b3b','#22d3a5','#ff4b6e'], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#8b9cc0', font: { size: 11 }, boxWidth: 12, padding: 16 } } } }
+    });
+
+    // Últimos 7 dias
+    const dias = [];
+    const diasLabels = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const label = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
+      diasLabels.push(label);
+      dias.push(embarques.filter(e => new Date(e.criado_em).toDateString() === d.toDateString()).length);
+    }
+    if (chartDias) chartDias.destroy();
+    const ctxD = document.getElementById('chart-dias').getContext('2d');
+    chartDias = new Chart(ctxD, {
+      type: 'bar',
+      data: {
+        labels: diasLabels,
+        datasets: [{ label: 'Embarques', data: dias, backgroundColor: 'rgba(59,127,255,0.6)', borderColor: '#3b7fff', borderRadius: 6, borderWidth: 1 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b9cc0', font: { size: 11 } }, grid: { display: false } }, y: { ticks: { color: '#8b9cc0', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+    });
+  }
+
+  // ─── RELATÓRIOS ───────────────────────────────────────────────
+  async function loadRelatorios() {
+    const { data } = await db.from('embarques').select('*');
+    const embarques = data || [];
+
+    const total = embarques.length;
+    const totalValor = embarques.reduce((a, e) => a + (parseFloat(e.valor) || 0), 0);
+    const mediaDia = total ? (total / 30).toFixed(1) : 0;
+    const ticketMedio = total ? (totalValor / total) : 0;
+
+    document.getElementById('rel-stats').innerHTML = `
+      <div class="stat-card blue"><div class="stat-label">Total</div><div class="stat-value">${total}</div><div class="stat-sub">embarques</div></div>
+      <div class="stat-card green"><div class="stat-label">Valor Total</div><div class="stat-value" style="font-size:22px">${formatCurrency(totalValor)}</div></div>
+      <div class="stat-card orange"><div class="stat-label">Média/Dia</div><div class="stat-value">${mediaDia}</div><div class="stat-sub">últimos 30 dias</div></div>
+      <div class="stat-card red"><div class="stat-label">Ticket Médio</div><div class="stat-value" style="font-size:22px">${formatCurrency(ticketMedio)}</div></div>
+    `;
+
+    // Por usuário
+    const userMap = {};
+    embarques.forEach(e => { const u = e.criado_por || 'Desconhecido'; userMap[u] = (userMap[u] || 0) + 1; });
+    const sortedUsers = Object.entries(userMap).sort((a,b) => b[1]-a[1]);
+    if (chartUsuarios) chartUsuarios.destroy();
+    const ctxU = document.getElementById('chart-usuarios').getContext('2d');
+    chartUsuarios = new Chart(ctxU, {
+      type: 'bar',
+      data: {
+        labels: sortedUsers.map(x => x[0]),
+        datasets: [{ label: 'Embarques', data: sortedUsers.map(x => x[1]), backgroundColor: 'rgba(34,211,165,0.6)', borderColor: '#22d3a5', borderRadius: 6, borderWidth: 1 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b9cc0' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#8b9cc0' }, grid: { display: false } } } }
+    });
+
+    // Por destino
+    const destMap = {};
+    embarques.forEach(e => { destMap[e.destino] = (destMap[e.destino] || 0) + (parseFloat(e.valor) || 0); });
+    const sortedDest = Object.entries(destMap).sort((a,b) => b[1]-a[1]).slice(0, 10);
+    if (chartDestinos) chartDestinos.destroy();
+    const ctxDest = document.getElementById('chart-destinos').getContext('2d');
+    chartDestinos = new Chart(ctxDest, {
+      type: 'bar',
+      data: {
+        labels: sortedDest.map(x => x[0]),
+        datasets: [{ label: 'Valor (R$)', data: sortedDest.map(x => x[1]), backgroundColor: 'rgba(255,123,59,0.6)', borderColor: '#ff7b3b', borderRadius: 6, borderWidth: 1 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b9cc0', callback: v => 'R$' + (v/1000).toFixed(0) + 'k' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#8b9cc0' }, grid: { display: false } } } }
+    });
+  }
+
+  // ─── CONFIGURAÇÕES ────────────────────────────────────────────
+  async function loadConfiguracoes() {
+    if (currentProfile?.tipo !== 'admin') {
+      document.getElementById('users-config-card').style.display = 'none';
+      return;
+    }
+    const { data } = await db.from('usuarios').select('*').order('nome');
+    const el = document.getElementById('users-list');
+    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px">Nenhum usuário cadastrado</div>'; return; }
+    el.innerHTML = data.map(u => `
+      <div class="user-row">
+        <div class="user-avatar" style="width:36px;height:36px;flex-shrink:0">${(u.nome||u.email)[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome || '-'}</div>
+          <div style="font-size:12px;color:var(--text3)">${u.email}</div>
+        </div>
+        <span class="role-badge role-${u.tipo}">${u.tipo}</span>
+        ${u.id !== currentUser?.id ? `<button class="btn btn-danger btn-sm btn-icon" onclick="desativarUsuario('${u.id}')" title="Remover">🗑</button>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function openNovoUsuario() { openModal('modal-usuario'); }
+
+  async function criarUsuario() {
+    const nome = document.getElementById('nu-nome').value.trim();
+    const email = document.getElementById('nu-email').value.trim();
+    const senha = document.getElementById('nu-senha').value;
+    const tipo = document.getElementById('nu-tipo').value;
+    const errEl = document.getElementById('nu-error');
+    if (!nome || !email || !senha) { errEl.textContent = 'Preencha todos os campos.'; errEl.style.display = 'block'; return; }
+    if (senha.length < 6) { errEl.textContent = 'Senha deve ter pelo menos 6 caracteres.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    const { data, error } = await db.auth.admin ? db.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { full_name: nome } }) : { error: { message: 'Use o painel do Supabase para criar usuários ou configure a Admin API.' } };
+    if (error) {
+      // Fallback: try signup
+      const { data: sd, error: se } = await db.auth.signUp({ email, password: senha, options: { data: { full_name: nome } } });
+      if (se) { errEl.textContent = se.message; errEl.style.display = 'block'; return; }
+      if (sd.user) {
+        await db.from('usuarios').upsert({ id: sd.user.id, nome, email, tipo }, { onConflict: 'id' });
+      }
+    } else if (data?.user) {
+      await db.from('usuarios').upsert({ id: data.user.id, nome, email, tipo }, { onConflict: 'id' });
+    }
+    closeModal('modal-usuario');
+    loadConfiguracoes();
+    alert('Usuário criado! Peça para ele confirmar o e-mail.');
+  }
+
+  async function desativarUsuario(id) {
+    if (!confirm('Remover este usuário da listagem?')) return;
+    await db.from('usuarios').delete().eq('id', id);
+    loadConfiguracoes();
+  }
+
+  // ─── MODO RÁPIDO ──────────────────────────────────────────────
+  async function salvarRapido() {
+    const placa = document.getElementById('r-placa').value.trim().toUpperCase();
+    const motorista = document.getElementById('r-motorista').value.trim();
+    const origem = document.getElementById('r-origem').value.trim();
+    const destino = document.getElementById('r-destino').value.trim();
+    const valorRaw = document.getElementById('r-valor').value.replace(',','.').trim();
+    const valor = parseFloat(valorRaw) || 0;
+    const obs = document.getElementById('r-obs').value.trim();
+
+    if (!placa || !motorista || !origem || !destino || !valor) {
+      alert('Preencha Placa, Motorista, Origem, Destino e Valor.'); return;
+    }
+
+    const btn = document.getElementById('rapido-save-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner" style="border-top-color:white"></span> Salvando...';
+
+    const { error } = await db.from('embarques').insert({
+      placa, motorista, origem, destino, valor, observacao: obs,
+      status: 'Aguardando carregamento',
+      criado_por: currentProfile?.nome || currentUser?.email,
+      criado_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString(),
+      editado_por: currentProfile?.nome
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'SALVAR EMBARQUE';
+
+    if (error) { alert('Erro ao salvar: ' + error.message); return; }
+
+    // Clear
+    ['r-placa','r-motorista','r-origem','r-destino','r-valor','r-obs'].forEach(id => document.getElementById(id).value = '');
+
+    // Toast
+    const toast = document.getElementById('success-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2800);
+
+    loadRecentes();
+  }
+
+  async function loadRecentes() {
+    const { data } = await db.from('embarques').select('*').order('criado_em', { ascending: false }).limit(5);
+    const el = document.getElementById('recentes-list');
+    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Nenhum embarque ainda</div>'; return; }
+    el.innerHTML = data.map(e => `
+      <div class="recente-item">
+        <div>
+          <div class="recente-rota">${e.origem} → ${e.destino}</div>
+          <div class="recente-placa">${e.placa} · ${e.motorista}</div>
+        </div>
+        <div class="recente-valor">${formatCurrency(e.valor)}</div>
+      </div>
+    `).join('');
+  }
+
+  async function duplicarUltimo() {
+    const { data } = await db.from('embarques').select('*').order('criado_em', { ascending: false }).limit(1);
+    if (!data || !data.length) { alert('Nenhum embarque para duplicar.'); return; }
+    const last = data[0];
+    document.getElementById('r-placa').value = last.placa || '';
+    document.getElementById('r-motorista').value = last.motorista || '';
+    document.getElementById('r-origem').value = last.origem || '';
+    document.getElementById('r-destino').value = last.destino || '';
+    document.getElementById('r-valor').value = last.valor || '';
+    document.getElementById('r-obs').value = last.observacao || '';
+  }
+
+  // ─── AUTOCOMPLETE ─────────────────────────────────────────────
+  async function autocompleteRapido(inputId, field) {
+    const val = document.getElementById(inputId).value.trim().toLowerCase();
+    const listId = 'ac-' + inputId;
+    const list = document.getElementById(listId);
+    if (!val || val.length < 2) { list.classList.remove('open'); return; }
+    const { data } = await db.from('embarques').select(field).ilike(field, `%${val}%`).limit(8);
+    if (!data || !data.length) { list.classList.remove('open'); return; }
+    const unique = [...new Set(data.map(d => d[field]))];
+    list.innerHTML = unique.map(v => `<div class="autocomplete-item" onclick="selectAC('${inputId}','${v}','${listId}')">${v}</div>`).join('');
+    list.classList.add('open');
+  }
+
+  function selectAC(inputId, value, listId) {
+    document.getElementById(inputId).value = value;
+    document.getElementById(listId).classList.remove('open');
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrap')) document.querySelectorAll('.autocomplete-list').forEach(l => l.classList.remove('open'));
+  });
+
+  // ─── EXPORT ───────────────────────────────────────────────────
+  async function exportCSV() {
+    const { data } = await db.from('embarques').select('*').order('criado_em', { ascending: false });
+    if (!data || !data.length) { alert('Sem dados para exportar.'); return; }
+    const headers = ['ID','Placa','Motorista','Origem','Destino','Valor','Status','Observação','Criado por','Criado em','Atualizado em','Editado por'];
+    const rows = data.map(e => [e.id, e.placa, e.motorista, e.origem, e.destino, e.valor, e.status, e.observacao || '', e.criado_por || '', formatDate(e.criado_em), formatDate(e.atualizado_em), e.editado_por || '']);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    downloadFile('embarques_cargaflow.csv', csv, 'text/csv');
+  }
+
+  async function exportJSON() {
+    const { data } = await db.from('embarques').select('*').order('criado_em', { ascending: false });
+    if (!data) { alert('Sem dados para exportar.'); return; }
+    downloadFile('backup_cargaflow.json', JSON.stringify(data, null, 2), 'application/json');
+  }
+
+  function downloadFile(name, content, type) {
+    const blob = new Blob([content], { type });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ─── THEME ────────────────────────────────────────────────────
+  function loadTheme() {
+    const theme = localStorage.getItem('cf-theme') || 'dark';
+    const accent = localStorage.getItem('cf-accent');
+    const glow = localStorage.getItem('cf-glow');
+    document.documentElement.setAttribute('data-theme', theme);
+    if (accent) { document.documentElement.style.setProperty('--accent', accent); document.documentElement.style.setProperty('--accent2', accent); }
+    if (glow) document.documentElement.style.setProperty('--accent-glow', glow);
+  }
+
+  function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    setTheme(cur === 'dark' ? 'light' : 'dark');
+  }
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('cf-theme', theme);
+  }
+
+  function setAccentColor(color, glow) {
+    document.documentElement.style.setProperty('--accent', color);
+    document.documentElement.style.setProperty('--accent2', color);
+    document.documentElement.style.setProperty('--accent-glow', glow);
+    localStorage.setItem('cf-accent', color);
+    localStorage.setItem('cf-glow', glow);
+  }
+
+  // ─── HELPERS ──────────────────────────────────────────────────
+  function formatCurrency(v) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+  }
+  function formatDate(d) {
+    if (!d) return '-';
+    return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function statusBadge(status) {
+    const map = {
+      'Aguardando carregamento': 'badge-aguardando',
+      'Em carregamento': 'badge-carregando',
+      'Em trânsito': 'badge-transito',
+      'Entregue': 'badge-entregue',
+      'Cancelado': 'badge-cancelado'
+    };
+    const cls = map[status] || 'badge-aguardando';
+    const short = status?.replace('Aguardando carregamento','Aguardando').replace('Em carregamento','Carregando') || '-';
+    return `<span class="badge ${cls}">${short}</span>`;
+  }
+  </script>
+</body>
+</html>
