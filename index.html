@@ -892,7 +892,7 @@ body{letter-spacing:-.01em}body:before{content:'';position:fixed;inset:0;pointer
             <span class="nav-icon">📁</span> Relatórios
           </div>
         </div>
-        <div class="nav-section" id="admin-nav" style="display:none">
+        <div class="nav-section" id="admin-nav">
           <div class="nav-section-label">Administração</div>
           <div class="nav-item" onclick="goTo('configuracoes')" data-route="configuracoes">
             <span class="nav-icon">⚙️</span> Configurações
@@ -2060,6 +2060,42 @@ window.showToast=function(msg){const toast=document.getElementById('success-toas
 const oldLoadConfig=window.loadConfiguracoes; window.loadConfiguracoes=async function(){ await oldLoadConfig.apply(this,arguments); patchSettings(); const users=document.getElementById('users-list'); if(users && currentProfile?.tipo==='admin'){ users.querySelectorAll('.user-row').forEach(row=>{ const badge=row.querySelector('.role-badge'); if(badge && !row.querySelector('.role-select-inline')){ const txt=badge.textContent.trim(); const btn=row.querySelector('button[onclick^="desativarUsuario"]'); const idMatch=btn?.getAttribute('onclick')?.match(/'([^']+)'/); const id=idMatch?.[1]; if(id){ badge.outerHTML=`<select class="form-select role-select-inline" onchange="alterarTipoUsuario('${id}', this.value)"><option value="admin" ${txt==='admin'?'selected':''}>Admin</option><option value="operador" ${txt==='operador'?'selected':''}>Operador</option><option value="visualizador" ${txt==='visualizador'?'selected':''}>Visualizador</option></select>`; } } }); }};
 const oldOpenNovo=window.openNovoEmbarque; window.openNovoEmbarque=function(){ oldOpenNovo.apply(this,arguments); const st=document.getElementById('m-status'); if(st) st.value=getDefaultStatus(); };
 document.addEventListener('DOMContentLoaded',()=>{ensureExportModal(); patchButtons(); applyInterfaceSettings(); setTimeout(()=>{patchButtons(); patchSettings();},800);});
+})();
+</script>
+
+<script id="cf-operator-v3-fix">
+(function(){
+  function ensureSettingsVisible(){ const nav=document.getElementById('admin-nav'); if(nav) nav.style.display='block'; }
+  const _init=window.initApp; window.initApp=function(){ if(_init) _init.apply(this,arguments); ensureSettingsVisible(); };
+  const _go=window.goTo; window.goTo=function(route){ ensureSettingsVisible(); if(_go) return _go.apply(this,arguments); };
+  const _loadConfig=window.loadConfiguracoes;
+  window.loadConfiguracoes=async function(){
+    ensureSettingsVisible();
+    if(_loadConfig) await _loadConfig.apply(this,arguments);
+    const usersCard=document.getElementById('users-config-card');
+    if(usersCard) usersCard.style.display=currentProfile?.tipo==='admin'?'block':'none';
+    const users=document.getElementById('users-list');
+    if(users && currentProfile?.tipo==='admin'){
+      const {data,error}=await db.from('usuarios').select('*').order('nome');
+      if(!error && data){
+        users.innerHTML=data.map(u=>`<div class="user-row"><div class="user-avatar" style="width:36px;height:36px;flex-shrink:0">${(u.nome||u.email||'?')[0].toUpperCase()}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome||'-'}</div><div style="font-size:12px;color:var(--text3)">${u.email||'-'}</div></div><select class="form-select role-select-inline" style="max-width:150px" onchange="alterarTipoUsuario('${u.id}', this.value)"><option value="admin" ${u.tipo==='admin'?'selected':''}>Admin</option><option value="operador" ${u.tipo==='operador'?'selected':''}>Operador</option><option value="visualizador" ${u.tipo==='visualizador'?'selected':''}>Visualizador</option></select></div>`).join('');
+      }
+    }
+  };
+  function sameDay(a,b){return new Date(a).toDateString()===b.toDateString()}
+  function statusCount(arr,s){return arr.filter(e=>e.status===s).length}
+  window.loadDashboard=async function(){
+    const {data,error}=await db.from('embarques').select('*').order('criado_em',{ascending:false});
+    if(error){document.getElementById('dashboard-stats').innerHTML=`<div class="card" style="color:var(--red)">Erro: ${error.message}</div>`;return}
+    const embarques=data||[], total=embarques.length, entregues=statusCount(embarques,'Entregue'), cancelados=statusCount(embarques,'Cancelado'), aguardando=statusCount(embarques,'Aguardando carregamento'), hoje=embarques.filter(e=>sameDay(e.criado_em,new Date())).length;
+    document.getElementById('dashboard-stats').innerHTML=`<div class="stat-card blue"><div class="stat-label">Embarques ativos</div><div class="stat-value">${total-entregues-cancelados}</div><div class="stat-sub">em operação</div><div class="stat-icon">🚛</div></div><div class="stat-card orange"><div class="stat-label">Lançados hoje</div><div class="stat-value">${hoje}</div><div class="stat-sub">novos registros</div><div class="stat-icon">⚡</div></div><div class="stat-card green"><div class="stat-label">Entregues</div><div class="stat-value">${entregues}</div><div class="stat-sub">finalizados</div><div class="stat-icon">✅</div></div><div class="stat-card red"><div class="stat-label">Aguardando</div><div class="stat-value">${aguardando}</div><div class="stat-sub">pendentes</div><div class="stat-icon">⏳</div></div>`;
+    const h=document.querySelector('#dash-table thead tr'); if(h) h.innerHTML='<th>Placa</th><th>Motorista</th><th>Rota</th><th>Status</th><th>Lançado por</th><th>Data</th>';
+    const tb=document.getElementById('dash-tbody'), dash=embarques.slice(0,10);
+    tb.innerHTML=dash.length?dash.map(e=>`<tr><td class="bold" style="font-family:var(--font-display);letter-spacing:.04em">${e.placa||'-'}</td><td>${e.motorista||'-'}</td><td style="font-size:12px">${e.origem||'-'} → ${e.destino||'-'}</td><td>${statusBadge(e.status)}</td><td style="font-size:12px;color:var(--text3)">${e.criado_por||'-'}</td><td style="font-size:12px;color:var(--text3)">${formatDate(e.criado_em)}</td></tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📦</div><p>Nenhum embarque</p></div></td></tr>`;
+  };
+  const style=document.createElement('style'); style.textContent=`:root{--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;--font-display:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}.logo-text,.login-logo-text,.topbar-title,.section-title,.stat-value{letter-spacing:-.03em!important}.stat-card{min-height:126px;background:linear-gradient(180deg,var(--bg2),rgba(255,255,255,.025))}.stat-label{font-size:11px}.chart-title{font-size:13px;text-transform:uppercase;letter-spacing:.06em}`;
+  document.head.appendChild(style);
+  document.addEventListener('DOMContentLoaded',()=>{ensureSettingsVisible();setTimeout(()=>{ensureSettingsVisible();if((location.hash.replace('#','')||'dashboard')==='dashboard') loadDashboard();},800)});
 })();
 </script>
 </body>
