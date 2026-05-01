@@ -706,6 +706,38 @@
     .color-swatch.active, .color-swatch:hover { border-color: var(--text); transform: scale(1.15); }
     .color-swatches { display: flex; gap: 10px; flex-wrap: wrap; }
 
+
+    /* ─── LOGIN 2.0 / CADASTRO ─── */
+    .login-card { max-width: 980px; padding: 0; display: grid; grid-template-columns: 1fr 1.05fr; overflow: hidden; }
+    .login-hero { padding: 42px; background: linear-gradient(160deg, rgba(59,127,255,0.22), rgba(34,211,165,0.10)); border-right: 1px solid var(--border); display:flex; flex-direction:column; justify-content:space-between; min-height: 560px; }
+    .login-hero h1 { font-size: 38px; line-height: .95; letter-spacing: -1.6px; margin-top: 28px; }
+    .login-hero p { color: var(--text2); font-size: 15px; margin-top: 14px; max-width: 330px; }
+    .login-pill-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:22px; }
+    .login-pill { padding:8px 11px; border-radius:999px; background:var(--glass2); border:1px solid var(--border); font-size:12px; color:var(--text2); font-weight:700; }
+    .login-form-panel { padding: 36px; }
+    .auth-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:5px; background:var(--bg3); border:1px solid var(--border); border-radius:14px; margin-bottom:22px; }
+    .auth-tab { border:0; border-radius:10px; background:transparent; color:var(--text2); padding:11px 10px; font-family:var(--font); font-weight:800; cursor:pointer; }
+    .auth-tab.active { background:var(--accent); color:white; box-shadow:0 4px 16px var(--accent-glow); }
+    .signup-only { display:none; }
+    .auth-signup .signup-only { display:block; }
+    .auth-signup #login-btn { display:none; }
+    .auth-login #signup-btn { display:none; }
+    .profile-picker { display:flex; align-items:center; gap:12px; padding:12px; background:var(--bg3); border:1px solid var(--border); border-radius:14px; margin-bottom:14px; }
+    .profile-preview { width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--green)); color:white; display:flex; align-items:center; justify-content:center; font-weight:900; overflow:hidden; flex-shrink:0; }
+    .profile-preview img { width:100%; height:100%; object-fit:cover; }
+    .profile-file-label { display:inline-flex; padding:9px 12px; border-radius:10px; background:var(--glass2); border:1px solid var(--border2); cursor:pointer; font-weight:800; font-size:13px; }
+    .profile-file-label input { display:none; }
+    .mini-hint { font-size:12px; color:var(--text3); margin-top:4px; }
+    .profile-settings-grid { display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center; }
+    .profile-settings-avatar { width:72px; height:72px; border-radius:22px; background:linear-gradient(135deg,var(--accent),var(--green)); display:flex; align-items:center; justify-content:center; color:white; font-size:28px; font-weight:900; overflow:hidden; }
+    .profile-settings-avatar img { width:100%; height:100%; object-fit:cover; }
+    @media (max-width: 760px) {
+      .login-card { grid-template-columns: 1fr; max-width: 430px; }
+      .login-hero { min-height: auto; padding: 28px; }
+      .login-hero h1 { font-size: 30px; }
+      .login-form-panel { padding: 24px; }
+    }
+
     /* ─── SCROLLABLE TABLE ─── */
     .table-actions { display: flex; gap: 6px; }
   </style>
@@ -717,22 +749,57 @@
       <div class="orb orb1"></div>
       <div class="orb orb2"></div>
     </div>
-    <div class="login-card">
-      <div class="login-logo">
-        <div class="login-logo-icon">🚛</div>
-        <div class="login-logo-text">Carga<span>Flow</span></div>
+    <div class="login-card auth-login" id="auth-card">
+      <div class="login-hero">
+        <div>
+          <div class="login-logo">
+            <div class="login-logo-icon">🚛</div>
+            <div class="login-logo-text">Carga<span>Flow</span></div>
+          </div>
+          <h1>Controle seus embarques sem bagunça.</h1>
+          <p>Lançamento rápido no celular, painel completo no computador e cada registro com o usuário que lançou.</p>
+          <div class="login-pill-row">
+            <span class="login-pill">⚡ lançamento rápido</span>
+            <span class="login-pill">📊 dashboard</span>
+            <span class="login-pill">👥 equipe</span>
+          </div>
+        </div>
+        <div class="mini-hint">Novo visual + cadastro direto + perfil personalizável.</div>
       </div>
-      <p class="login-subtitle">Sistema de Controle de Embarques</p>
-      <div class="login-error" id="login-error"></div>
-      <div class="form-group">
-        <label class="form-label">E-mail</label>
-        <input type="email" class="form-input" id="login-email" placeholder="seu@email.com" autocomplete="email" />
+      <div class="login-form-panel">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login" onclick="switchAuthMode('login')">Entrar</button>
+          <button class="auth-tab" id="tab-signup" onclick="switchAuthMode('signup')">Criar conta</button>
+        </div>
+        <p class="login-subtitle" id="auth-subtitle">Acesse sua operação de embarques.</p>
+        <div class="login-error" id="login-error"></div>
+        <div class="signup-only">
+          <div class="profile-picker">
+            <div class="profile-preview" id="signup-photo-preview">👤</div>
+            <div>
+              <label class="profile-file-label">Adicionar foto
+                <input type="file" accept="image/*" onchange="handleSignupPhoto(event)" />
+              </label>
+              <div class="mini-hint">Opcional. Fica salva no seu perfil.</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nome</label>
+            <input type="text" class="form-input" id="signup-name" placeholder="Seu nome" autocomplete="name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input type="email" class="form-input" id="login-email" placeholder="seu@email.com" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-input" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button class="btn-login" id="login-btn" onclick="doLogin()">Entrar</button>
+        <button class="btn-login" id="signup-btn" onclick="doSignup()">Criar minha conta</button>
+        <div class="mini-hint" style="text-align:center;margin-top:14px" id="auth-footer-hint">Se ainda não tiver conta, toque em “Criar conta”.</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Senha</label>
-        <input type="password" class="form-input" id="login-password" placeholder="••••••••" autocomplete="current-password" />
-      </div>
-      <button class="btn-login" id="login-btn" onclick="doLogin()">Entrar</button>
     </div>
   </div>
 
@@ -933,6 +1000,23 @@
         <div class="section-header"><div class="section-title">⚙️ Configurações</div></div>
         <div style="display:grid;gap:16px;max-width:700px">
           <div class="card">
+            <div style="font-weight:700;margin-bottom:16px">Meu perfil</div>
+            <div class="profile-settings-grid">
+              <div class="profile-settings-avatar" id="settings-avatar">👤</div>
+              <div>
+                <div class="form-group" style="margin-bottom:10px">
+                  <label class="form-label">Nome exibido</label>
+                  <input class="form-input" id="settings-name" placeholder="Seu nome" />
+                </div>
+                <label class="profile-file-label">Trocar foto
+                  <input type="file" accept="image/*" onchange="handleSettingsPhoto(event)" />
+                </label>
+                <button class="btn btn-primary btn-sm" style="margin-left:8px" onclick="saveProfileSettings()">Salvar perfil</button>
+                <div class="mini-hint">A foto é compactada e salva leve no Supabase Storage.</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
             <div style="font-weight:700;margin-bottom:16px">Aparência</div>
             <div class="form-group">
               <label class="form-label">Tema</label>
@@ -1093,6 +1177,10 @@
   let currentPage = 1;
   const PER_PAGE = 20;
   let chartStatus = null, chartDias = null, chartUsuarios = null, chartDestinos = null;
+  let authMode = 'login';
+  let signupPhotoFile = null;
+  let settingsPhotoFile = null;
+  const AVATAR_BUCKET = 'avatars';
 
   // ─── INIT ─────────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', async () => {
@@ -1120,19 +1208,21 @@
 
   async function loadProfile() {
     const { data } = await db.from('usuarios').select('*').eq('id', currentUser.id).single();
+    const meta = currentUser.user_metadata || {};
     if (data) {
-      currentProfile = data;
+      currentProfile = { ...data, avatar_url: meta.avatar_url || meta.avatar_data || '', accent_color: meta.accent_color || '' };
     } else {
       // auto-create profile
-      const nome = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+      const nome = meta.full_name || currentUser.email.split('@')[0];
       const { data: newP } = await db.from('usuarios').upsert({
         id: currentUser.id,
         email: currentUser.email,
         nome,
         tipo: 'operador'
       }, { onConflict: 'id' }).select().single();
-      currentProfile = newP || { id: currentUser.id, email: currentUser.email, nome, tipo: 'operador' };
+      currentProfile = { ...(newP || { id: currentUser.id, email: currentUser.email, nome, tipo: 'operador' }), avatar_url: meta.avatar_url || meta.avatar_data || '', accent_color: meta.accent_color || '' };
     }
+    if (currentProfile?.accent_color) setAccentColor(currentProfile.accent_color, hexToGlow(currentProfile.accent_color), false);
   }
 
   function initApp() {
@@ -1157,6 +1247,112 @@
     document.getElementById('login-page').classList.add('active');
   }
 
+  function switchAuthMode(mode) {
+    authMode = mode;
+    const card = document.getElementById('auth-card');
+    card.classList.toggle('auth-signup', mode === 'signup');
+    card.classList.toggle('auth-login', mode === 'login');
+    document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+    document.getElementById('auth-subtitle').textContent = mode === 'signup' ? 'Crie seu acesso para começar a lançar embarques.' : 'Acesse sua operação de embarques.';
+    document.getElementById('auth-footer-hint').textContent = mode === 'signup' ? 'Depois de criar, você já entra como operador.' : 'Se ainda não tiver conta, toque em “Criar conta”.';
+    document.getElementById('login-error').classList.remove('show');
+    document.getElementById('login-password').setAttribute('autocomplete', mode === 'signup' ? 'new-password' : 'current-password');
+  }
+
+  async function compressProfilePhoto(file) {
+    if (!file) return null;
+    if (!file.type.startsWith('image/')) { alert('Escolha uma imagem JPG ou PNG.'); return null; }
+    if (file.size > 5 * 1024 * 1024) { alert('Escolha uma foto de até 5 MB. O sistema comprime automaticamente depois.'); return null; }
+
+    const imageUrl = URL.createObjectURL(file);
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = imageUrl;
+    });
+
+    const size = 320;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const minSide = Math.min(img.width, img.height);
+    const sx = (img.width - minSide) / 2;
+    const sy = (img.height - minSide) / 2;
+    ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+    URL.revokeObjectURL(imageUrl);
+
+    return await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.78));
+  }
+
+  function previewPhoto(file, targetId) {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const target = document.getElementById(targetId);
+    if (target) target.innerHTML = `<img src="${url}" alt="Foto de perfil">`;
+  }
+
+  async function uploadProfilePhoto(file, userId) {
+    if (!file || !userId) return '';
+    const blob = await compressProfilePhoto(file);
+    if (!blob) return '';
+    if (blob.size > 500 * 1024) { alert('Não consegui compactar a foto abaixo de 500 KB. Tente outra imagem.'); return ''; }
+
+    const path = `${userId}/avatar.jpg`;
+    const { error } = await db.storage.from(AVATAR_BUCKET).upload(path, blob, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: 'image/jpeg'
+    });
+    if (error) {
+      console.error('Erro no upload da foto:', error);
+      alert('Não consegui salvar a foto. Confira se o bucket avatars foi criado no Supabase.');
+      return '';
+    }
+    const { data } = db.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  }
+
+  function handleSignupPhoto(ev) {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    signupPhotoFile = file;
+    previewPhoto(file, 'signup-photo-preview');
+  }
+
+  async function doSignup() {
+    const nome = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('login-email').value.trim();
+    const pwd = document.getElementById('login-password').value;
+    const btn = document.getElementById('signup-btn');
+    const err = document.getElementById('login-error');
+    if (!nome || !email || !pwd) { showLoginError('Preencha nome, e-mail e senha.'); return; }
+    if (pwd.length < 6) { showLoginError('A senha precisa ter pelo menos 6 caracteres.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Criando...';
+    const { data, error } = await db.auth.signUp({
+      email,
+      password: pwd,
+      options: { data: { full_name: nome } }
+    });
+    btn.disabled = false;
+    btn.textContent = 'Criar minha conta';
+    if (error) { showLoginError(error.message || 'Não foi possível criar a conta.'); return; }
+    if (data?.user) {
+      let avatarUrl = '';
+      if (data?.session && signupPhotoFile) {
+        avatarUrl = await uploadProfilePhoto(signupPhotoFile, data.user.id);
+        if (avatarUrl) await db.auth.updateUser({ data: { full_name: nome, avatar_url: avatarUrl } });
+      }
+      await db.from('usuarios').upsert({ id: data.user.id, nome, email, tipo: 'operador' }, { onConflict: 'id' });
+    }
+    err.classList.remove('show');
+    alert('Conta criada! Se o Supabase pedir confirmação, confirme no e-mail. Se não pedir, você já pode entrar.');
+    switchAuthMode('login');
+  }
+
   async function doLogin() {
     const email = document.getElementById('login-email').value.trim();
     const pwd = document.getElementById('login-password').value;
@@ -1177,7 +1373,7 @@
     el.textContent = msg; el.classList.add('show');
   }
 
-  document.getElementById('login-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') authMode === 'signup' ? doSignup() : doLogin(); });
 
   async function doLogout() {
     await db.auth.signOut();
@@ -1238,8 +1434,11 @@
     const avatarEl = document.getElementById('sidebar-avatar');
     if (nameEl) nameEl.textContent = currentProfile.nome || currentProfile.email;
     if (roleEl) roleEl.textContent = currentProfile.tipo;
-    if (avatarEl) avatarEl.textContent = (currentProfile.nome || currentProfile.email)[0].toUpperCase();
-    document.getElementById('rapido-user-label').textContent = `Lançando como: ${currentProfile.nome}`;
+    if (avatarEl) {
+      avatarEl.innerHTML = currentProfile.avatar_url ? `<img src="${currentProfile.avatar_url}" alt="Perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : (currentProfile.nome || currentProfile.email)[0].toUpperCase();
+    }
+    const rapidoLabel = document.getElementById('rapido-user-label');
+    if (rapidoLabel) rapidoLabel.textContent = `Lançando como: ${currentProfile.nome}`;
   }
 
   // ─── MODALS ───────────────────────────────────────────────────
@@ -1557,8 +1756,42 @@
     });
   }
 
+  // ─── PERFIL / PERSONALIZAÇÃO ─────────────────────────────────
+  function fillProfileSettings() {
+    const nameInput = document.getElementById('settings-name');
+    const avatar = document.getElementById('settings-avatar');
+    if (nameInput) nameInput.value = currentProfile?.nome || '';
+    if (avatar) avatar.innerHTML = currentProfile?.avatar_url ? `<img src="${currentProfile.avatar_url}" alt="Perfil">` : ((currentProfile?.nome || currentProfile?.email || '?')[0].toUpperCase());
+  }
+
+  function handleSettingsPhoto(ev) {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    settingsPhotoFile = file;
+    previewPhoto(file, 'settings-avatar');
+  }
+
+  async function saveProfileSettings() {
+    const nome = document.getElementById('settings-name')?.value.trim() || currentProfile.nome;
+    const accent = localStorage.getItem('cf-accent') || currentProfile.accent_color || '#3b7fff';
+    let avatarUrl = currentProfile.avatar_url || '';
+    if (settingsPhotoFile) {
+      const uploaded = await uploadProfilePhoto(settingsPhotoFile, currentUser.id);
+      if (uploaded) avatarUrl = uploaded;
+    }
+    const { error: metaError } = await db.auth.updateUser({ data: { full_name: nome, avatar_url: avatarUrl, accent_color: accent } });
+    const { error: profileError } = await db.from('usuarios').upsert({ id: currentUser.id, email: currentUser.email, nome, tipo: currentProfile.tipo || 'operador' }, { onConflict: 'id' });
+    if (metaError || profileError) { alert('Não consegui salvar o perfil. Tente de novo.'); return; }
+    currentProfile = { ...currentProfile, nome, avatar_url: avatarUrl, accent_color: accent };
+    settingsPhotoFile = null;
+    updateSidebarUser();
+    fillProfileSettings();
+    showToast('✅ Perfil atualizado!');
+  }
+
   // ─── CONFIGURAÇÕES ────────────────────────────────────────────
   async function loadConfiguracoes() {
+    fillProfileSettings();
     if (currentProfile?.tipo !== 'admin') {
       document.getElementById('users-config-card').style.display = 'none';
       return;
@@ -1749,12 +1982,21 @@
     localStorage.setItem('cf-theme', theme);
   }
 
-  function setAccentColor(color, glow) {
+  function setAccentColor(color, glow, persistAuth = true) {
     document.documentElement.style.setProperty('--accent', color);
     document.documentElement.style.setProperty('--accent2', color);
     document.documentElement.style.setProperty('--accent-glow', glow);
     localStorage.setItem('cf-accent', color);
     localStorage.setItem('cf-glow', glow);
+    if (currentProfile) currentProfile.accent_color = color;
+    if (persistAuth && currentUser) db.auth.updateUser({ data: { ...(currentUser.user_metadata || {}), accent_color: color } }).catch(() => {});
+  }
+
+  function hexToGlow(hex) {
+    const h = (hex || '#3b7fff').replace('#','');
+    const bigint = parseInt(h.length === 3 ? h.split('').map(x=>x+x).join('') : h, 16);
+    const r = (bigint >> 16) & 255, g = (bigint >> 8) & 255, b = bigint & 255;
+    return `rgba(${r},${g},${b},0.3)`;
   }
 
   // ─── HELPERS ──────────────────────────────────────────────────
